@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>InfluenceIQ 🌟</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+
+  <!-- Orbitron Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: radial-gradient(circle at top, #0f172a, #030712);
+      color: white;
+      overflow-x: hidden;
+    }
+
+    .glow-text {
+      text-shadow: 0 0 10px #38bdf8, 0 0 20px #38bdf8;
+    }
+
+    .floating {
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+  </style>
+</head>
+
+<body class="flex flex-col items-center px-6 py-10 min-h-screen">
+
+  <h1 class="text-5xl md:text-6xl font-bold glow-text text-center floating mb-10">InfluenceIQ 🌟</h1>
+
+  <!-- Inputs -->
+  <div class="w-full max-w-4xl flex flex-col md:flex-row gap-6 justify-center items-center">
+    <select id="category" class="w-full md:w-1/2 p-3 rounded bg-gray-800 border border-cyan-400 text-white">
+      <option value="influencers">Influencers</option>
+      <option value="entrepreneurs">Entrepreneurs</option>
+      <option value="sports stars">Sports Stars</option>
+      <option value="celebrities">Celebrities</option>
+      <option value="politicians">Politicians</option>
+      <option value="scientists">Scientists</option>
+    </select>
+
+    <input id="name" type="text" placeholder="Enter name in lowercase according to category"
+           class="w-full md:w-1/2 p-3 rounded bg-gray-800 border border-cyan-400 text-white placeholder-gray-400" />
+  </div>
+
+  <!-- Analyze Button -->
+  <button onclick="analyzeInfluencer()" class="mt-8 px-8 py-3 bg-blue-500 hover:bg-blue-600 rounded-full text-lg font-bold tracking-wider transition-all duration-300">
+    🔍 Analyze Influence
+  </button>
+
+  <!-- Result -->
+  <div id="result" class="mt-10 text-center text-white text-lg"></div>
+
+  <!-- Chart -->
+  <div id="chartContainer" class="mt-10 hidden w-full max-w-xl">
+    <canvas id="influenceChart" height="200"></canvas>
+  </div>
+
+  <script>
+    let chart;
+
+    async function analyzeInfluencer() {
+      const category = document.getElementById('category').value;
+      const name = document.getElementById('name').value.trim();
+      const resultDiv = document.getElementById('result');
+
+      if (!name) {
+        resultDiv.innerHTML = `<p class="text-red-500 font-semibold">Please enter a name.</p>`;
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('category', category);
+
+      const res = await fetch('/analyze', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (res.status === 404) {
+        resultDiv.innerHTML = `<p class="text-red-500 font-semibold">${data.error}</p>`;
+        document.getElementById('chartContainer').classList.add('hidden');
+        return;
+      }
+
+      // Update HTML
+      resultDiv.innerHTML = `
+        <h2 class="text-3xl text-cyan-300 font-bold mb-4">Results for: ${data.name}</h2>
+        <p class="mb-2">🌍 <span class="font-semibold text-yellow-400">Country:</span> ${data.country}</p>
+        <p class="mb-2">✔️ <span class="font-semibold">Credibility:</span> ${data.credibility}/10</p>
+        <p class="mb-2">📆 <span class="font-semibold">Longevity:</span> ${data.longevity}/10</p>
+        <p class="mb-2">📊 <span class="font-semibold">Engagement:</span> ${data.engagement}/10</p>
+        <p class="mt-4 text-xl text-green-400 font-bold">Total InfluenceIQ Score: ${data.total_score}/10</p>
+      `;
+
+      // Show chart
+      document.getElementById('chartContainer').classList.remove('hidden');
+      const ctx = document.getElementById('influenceChart').getContext('2d');
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Credibility', 'Longevity', 'Engagement'],
+          datasets: [{
+            label: `${data.name}'s Metrics`,
+            data: [data.credibility, data.longevity, data.engagement],
+            backgroundColor: ['#3b82f6', '#facc15', '#10b981']
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 10
+            }
+          }
+        }
+      });
+
+      // ✅ Voice Reader
+      const textToRead = `Here are the results for ${data.name}. 
+      Country: ${data.country}. 
+      Credibility: ${data.credibility} out of 10. 
+      Longevity: ${data.longevity} out of 10. 
+      Engagement: ${data.engagement} out of 10. 
+      Total Influence IQ Score is ${data.total_score} out of 10.`;
+
+      const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.lang = 'en-US';
+      utterance.pitch = 1;
+      utterance.rate = 1;
+      utterance.volume = 1;
+
+      // Cancel any previous speech
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+    window.onload = analyzeInfluencer;
+
+  </script>
+</body>
+</html>
